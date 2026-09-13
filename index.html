@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#8067e8">
+  <title>Snoepjes Regenboogreis</title>
+  <style>
+    :root{--ink:#31265c;--glass:rgba(255,255,255,.7);--pink:#ff8fd0;--purple:#8067e8;--mint:#68d8c5}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#c8b8ff;font-family:ui-rounded,"SF Pro Rounded","Nunito",system-ui,sans-serif;color:var(--ink)}
+    canvas{display:block;width:100%;height:100%;touch-action:none}
+    button{font:inherit;border:0;cursor:pointer;color:inherit}
+    #loading{position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(160deg,#8171dc,#f1a6d8);z-index:20;color:white;font-weight:900;letter-spacing:.06em}
+    #loading span{animation:pulse 1s ease-in-out infinite alternate}@keyframes pulse{to{transform:scale(1.08);filter:drop-shadow(0 0 14px #fff)}}
+    #hud{position:fixed;inset:0;pointer-events:none;z-index:5;padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));opacity:0;visibility:hidden;transition:opacity .4s}.playing #hud{opacity:1;visibility:visible}
+    .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+    .glass{background:var(--glass);border:1px solid rgba(255,255,255,.92);box-shadow:0 10px 35px rgba(55,35,120,.16),inset 0 1px 1px #fff;backdrop-filter:blur(13px);-webkit-backdrop-filter:blur(13px)}
+    .score{border-radius:22px;padding:10px 13px 11px;min-width:164px}
+    .scoreline{display:flex;align-items:center;gap:9px;font-weight:950;font-size:18px}.gem{font-size:24px;filter:drop-shadow(0 3px 3px #8f54bf55)}
+    .bar{height:8px;background:#e7dcff;border-radius:99px;overflow:hidden;margin-top:7px}.bar i{display:block;width:0;height:100%;background:linear-gradient(90deg,#67d9c3,#9d75ec,#ff8ecd);border-radius:99px;box-shadow:0 0 12px #b56cff;transition:width .35s cubic-bezier(.2,.9,.2,1)}
+    .round{font-size:11px;font-weight:850;opacity:.66;margin-top:5px;letter-spacing:.05em;text-transform:uppercase}
+    .iconButton{pointer-events:auto;width:48px;height:48px;border-radius:50%;font-size:21px;display:grid;place-items:center;transition:transform .15s}.iconButton:active{transform:scale(.9)}
+    #tip{position:absolute;top:98px;left:50%;transform:translateX(-50%);border-radius:99px;padding:9px 15px;font-size:13px;font-weight:850;white-space:nowrap;opacity:0;transition:opacity .35s,transform .35s}.showtip{opacity:1!important;transform:translateX(-50%) translateY(4px)!important}
+    #boostWrap{position:absolute;right:18px;top:50%;transform:translateY(-50%);width:13px;height:120px;border-radius:99px;padding:3px}.boost{width:100%;height:100%;border-radius:99px;background:#e6dcf5;display:flex;align-items:flex-end;overflow:hidden}.boost i{display:block;width:100%;height:100%;background:linear-gradient(0deg,#ff88c9,#9d70ef,#68d8c5);border-radius:99px;transition:height .1s}.boostLabel{position:absolute;white-space:nowrap;right:-7px;top:50%;font-size:10px;font-weight:900;transform:rotate(-90deg) translateX(50%);transform-origin:right center;letter-spacing:.08em;color:white;text-shadow:0 1px 5px #443178}
+    #start,#win{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:22px;background:radial-gradient(circle at 50% 40%,rgba(245,231,255,.26),rgba(91,64,170,.42));transition:opacity .35s}
+    #win{display:none}
+    .card{width:min(530px,94vw);border-radius:34px;padding:clamp(22px,5vw,42px);text-align:center;background:rgba(255,255,255,.82);border:2px solid rgba(255,255,255,.9);box-shadow:0 30px 100px rgba(46,27,105,.35);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+    .mascot{font-size:65px;line-height:1;animation:float 2.4s ease-in-out infinite}@keyframes float{50%{transform:translateY(-8px) rotate(3deg)}}
+    h1{font-size:clamp(32px,7vw,58px);line-height:.93;margin:13px 0 11px;letter-spacing:-.055em;background:linear-gradient(135deg,#6753cc 10%,#a65ece 48%,#f179b9 90%);color:transparent;background-clip:text;-webkit-background-clip:text}
+    .subtitle{font-size:clamp(15px,3vw,19px);line-height:1.5;margin:0 auto 22px;max-width:430px;color:#5b4b7e}
+    .controlsHelp{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:0 0 24px}.chip{border-radius:99px;background:#eee8ff;padding:7px 10px;font-size:12px;font-weight:850;color:#675892}
+    .mainButton{pointer-events:auto;color:#fff;background:linear-gradient(135deg,#7760e1,#bf68d6 54%,#ff81bd);border-radius:18px;padding:14px 24px;font-weight:950;font-size:17px;box-shadow:0 12px 28px rgba(126,82,220,.35),inset 0 1px rgba(255,255,255,.45);transition:transform .15s,box-shadow .15s}.mainButton:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(126,82,220,.4)}.mainButton:active{transform:translateY(1px) scale(.97)}
+    #touch{position:absolute;left:0;right:0;bottom:max(18px,env(safe-area-inset-bottom));display:none;justify-content:space-between;align-items:flex-end;padding:0 18px;pointer-events:none}
+    .pad{display:grid;grid-template-columns:56px 56px 56px;grid-template-rows:56px 56px;gap:7px;pointer-events:auto}.touchButton{border-radius:20px;font-size:24px;font-weight:950;background:rgba(255,255,255,.65);border:1px solid rgba(255,255,255,.94);box-shadow:0 6px 18px rgba(49,35,97,.18);backdrop-filter:blur(8px);user-select:none;touch-action:none}.touchButton.pressed{transform:scale(.91);background:rgba(213,197,255,.86)}#up{grid-column:2}#left{grid-column:1;grid-row:2}#down{grid-column:2;grid-row:2}#right{grid-column:3;grid-row:2}
+    #magic{pointer-events:auto;width:76px;height:76px;border-radius:50%;font-size:29px;color:white;background:linear-gradient(145deg,#ff91cf,#9a70eb);box-shadow:0 8px 25px #774eb766,inset 0 1px #fff;border:2px solid #ffffffaa;touch-action:none}#magic.pressed{transform:scale(.92)}
+    @media(pointer:coarse),(max-width:760px){#touch{display:flex}.desktopOnly{display:none}.score{min-width:145px}.card{padding:25px 20px}#boostWrap{display:none}}
+    @media(max-height:600px){.mascot{font-size:42px}h1{font-size:35px}.subtitle{margin-bottom:12px}.controlsHelp{margin-bottom:14px}.card{padding:18px}.pad{grid-template-columns:48px 48px 48px;grid-template-rows:48px 48px}#magic{width:64px;height:64px}}
+
+    /* Kristalvlucht 2 — compacte avonturen-HUD en een open zicht op de wereld. */
+    #start{place-items:center start;padding-left:clamp(24px,7vw,110px);background:linear-gradient(90deg,rgba(48,34,98,.62),rgba(82,54,135,.13) 58%,transparent)}
+    #start .card{width:min(510px,92vw);text-align:left;background:rgba(255,250,255,.91);border-radius:28px;padding:clamp(23px,4vw,38px)}
+    #start .mascot{float:right;margin:-10px -7px 5px 12px;font-size:64px;filter:drop-shadow(0 12px 18px #49337655)}
+    .eyebrow{font-size:11px;font-weight:950;letter-spacing:.14em;text-transform:uppercase;color:#8a64c9;margin-bottom:12px}
+    #start h1{margin:0 0 14px;font-size:clamp(38px,6vw,68px);line-height:.88}
+    #start .subtitle{margin:0 0 18px;font-size:16px}
+    .adventureFacts{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:0 0 19px}
+    .fact{background:#f2ecff;border:1px solid #ded2fb;border-radius:14px;padding:9px 8px;text-align:center;font-size:11px;font-weight:900;color:#635188}.fact b{display:block;color:#7b55c9;font-size:17px;margin-bottom:1px}
+    .startActions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.tinyNote{font-size:11px;font-weight:800;color:#796b95}
+    .score{min-width:206px;padding:10px 12px}.scoreRows{display:flex;align-items:center;gap:13px}.miniScore{display:flex;align-items:center;gap:5px;font-size:17px;font-weight:950}.miniScore span:first-child{font-size:21px}.round{display:flex;align-items:center;justify-content:space-between;gap:8px}.round strong{color:#7356bd}
+    #navigator{position:absolute;top:max(15px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:9px;padding:8px 13px;border-radius:16px;min-width:190px;justify-content:center;color:#4f3c7c;font-size:12px;font-weight:900;transition:background .4s}
+    #navArrow{display:inline-grid;place-items:center;width:31px;height:31px;border-radius:50%;color:white;background:#8b68d8;box-shadow:0 3px 9px #7654b766;font-size:18px;transition:transform .15s}
+    #navText b{display:block;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#9277c3}#distance{color:#7960b0}
+    #quest{position:absolute;left:max(14px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));width:min(285px,calc(100vw - 28px));padding:11px 13px;border-radius:18px;font-size:12px;color:#554478}
+    #questTitle{font-weight:950;margin-bottom:3px;color:#6f50b5}#questText{font-weight:750;line-height:1.35}
+    #area{position:absolute;left:50%;top:70px;transform:translateX(-50%) translateY(-8px);opacity:0;color:white;text-shadow:0 2px 12px #362358;text-align:center;transition:.45s;letter-spacing:.08em;font-weight:950;font-size:18px}.areaShow{opacity:1!important;transform:translateX(-50%) translateY(0)!important}#area small{display:block;font-size:9px;letter-spacing:.18em;opacity:.86;margin-bottom:3px}
+    #tip{top:118px;background:rgba(255,255,255,.83)}
+    #boostWrap{right:auto;top:auto;bottom:max(16px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:180px;height:15px;padding:3px}.boost{align-items:center}.boost i{height:100%!important;width:100%;transition:width .1s;background:linear-gradient(90deg,#68d8c5,#9875e9,#ff89c7)}.boostLabel{right:auto;top:auto;left:50%;bottom:17px;transform:translateX(-50%);font-size:9px;text-shadow:0 1px 6px #47327d}
+    #companion{position:absolute;right:18px;bottom:18px;border-radius:16px;padding:8px 11px;font-size:11px;font-weight:900;color:#6e5799;display:flex;align-items:center;gap:7px}#companion span{font-size:24px}
+    #celebration{position:fixed;inset:0;z-index:9;pointer-events:none;overflow:hidden}.confetti{position:absolute;top:-8vh;width:10px;height:18px;border-radius:4px;animation:fall 6s linear infinite}@keyframes fall{to{transform:translate3d(var(--drift),115vh,0) rotate(720deg)}}
+    .statLine{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:-7px 0 22px}.statLine span{padding:7px 10px;border-radius:99px;background:#f0e9ff;font-size:12px;font-weight:900;color:#7057a4}
+    @media(pointer:coarse),(max-width:760px){#start{place-items:center;padding:18px;background:rgba(61,43,115,.32)}#start .card{text-align:center}#start .mascot{position:static;margin:-2px 0 6px;font-size:47px}#start h1{font-size:40px}.adventureFacts{margin-bottom:13px}.startActions{justify-content:center}.controlsHelp{display:none}#navigator{top:14px;min-width:150px;padding:7px 9px;margin-left:15px}#navText{max-width:105px;overflow:hidden;white-space:nowrap}.score{min-width:128px}.scoreRows{gap:8px}.miniScore{font-size:14px}.miniScore span:first-child{font-size:17px}.round{font-size:8px}#quest{display:none}#companion{display:none}#area{top:69px;font-size:14px}#tip{top:100px}#boostWrap{display:block;bottom:132px;width:110px}.tinyNote{display:none}}
+    @media(max-height:640px){#start .card{padding:19px}#start h1{font-size:36px}.adventureFacts{display:none}#start .subtitle{margin-bottom:10px}.eyebrow{margin-bottom:7px}.statLine{margin-bottom:12px}}
+    @media(prefers-reduced-motion:reduce){.mascot,.confetti{animation:none!important}*{scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <div id="loading"><span>✨ MAGIE LADEN… ✨</span></div>
+  <div id="start">
+    <section class="card" aria-labelledby="title">
+      <div class="mascot">🐉</div>
+      <div class="eyebrow">Een nieuw groot avontuur</div>
+      <h1 id="title">Snoepjes<br>Regenboogreis</h1>
+      <p class="subtitle">De drie Regenboogrijken zijn hun glans kwijt. Vlieg met Wolkie door ringen, ontdek geheime plekken en wek alle kristallen!</p>
+      <div class="adventureFacts"><div class="fact"><b>18</b>kristallen</div><div class="fact"><b>8</b>lichtringen</div><div class="fact"><b>3</b>rijken</div></div>
+      <div class="controlsHelp">
+        <span class="chip">← → sturen</span><span class="chip">↑ ↓ hoog & laag</span><span class="chip">spatie = sterrenvaart</span>
+      </div>
+      <div class="startActions"><button class="mainButton" id="play">Open je vleugels</button><span class="tinyNote">Wolkie vliegt met je mee ✦</span></div>
+    </section>
+  </div>
+  <div id="win">
+    <section class="card">
+      <div class="mascot">🌈🐉✨</div>
+      <h1>De hemel straalt!</h1>
+      <p class="subtitle">Snoepje en Wolkie hebben alle drie de Regenboogrijken wakker gemaakt.</p>
+      <div class="statLine"><span>💎 18 kristallen</span><span>🌈 8 ringen</span><span>🗺️ 3 rijken</span></div>
+      <button class="mainButton" id="again">Nog een vlucht</button>
+    </section>
+  </div>
+  <main id="hud" aria-label="Spelgegevens">
+    <div class="topbar">
+      <div class="score glass"><div class="scoreRows"><div class="miniScore"><span>💎</span><b id="count">0</b>/<span id="total">18</span></div><div class="miniScore"><span>🌈</span><b id="ringCount">0</b>/<span id="ringTotal">8</span></div></div><div class="bar"><i id="progress"></i></div><div class="round"><span>REGENBOOGREIS</span><strong id="areaSmall">Wolkenzee</strong></div></div>
+      <button id="sound" class="iconButton glass" aria-label="Geluid aan of uit">🔊</button>
+    </div>
+    <div id="navigator" class="glass"><span id="navArrow">▲</span><span id="navText"><b>Vlieg hierheen</b><span id="distance">zoekend…</span></span></div>
+    <div id="area"><small>JE ONTDEKT</small><span id="areaName">Wolkenzee</span></div>
+    <div id="tip" class="glass">Volg de zwevende lichtjes ✨</div>
+    <div id="quest" class="glass"><div id="questTitle">Hoofdmissie</div><div id="questText">Vind kristallen en vlieg door regenboogringen.</div></div>
+    <div id="boostWrap" class="glass"><div class="boost"><i id="boostBar"></i></div><span class="boostLabel">STERRENVAART</span></div>
+    <div id="companion" class="glass"><span>☁️</span><div><b>Wolkie</b><br>vliegt naast je</div></div>
+    <div id="touch">
+      <div class="pad" aria-label="Vliegknoppen"><button class="touchButton" id="up" data-key="up" aria-label="Omhoog">▲</button><button class="touchButton" id="left" data-key="left" aria-label="Links">◀</button><button class="touchButton" id="down" data-key="down" aria-label="Omlaag">▼</button><button class="touchButton" id="right" data-key="right" aria-label="Rechts">▶</button></div>
+      <button id="magic" aria-label="Magische vaart">✨</button>
+    </div>
+  </main>
+  <div id="celebration"></div>
+<script>window.__GAME_ERRORS__=[];addEventListener('error',e=>window.__GAME_ERRORS__.push(`${e.message} @ ${e.filename}:${e.lineno}:${e.colno}`));addEventListener('unhandledrejection',e=>window.__GAME_ERRORS__.push(String(e.reason?.stack||e.reason)));</script>
+<script type="module">
+import * as THREE from './three.module.js';
+
+const TOTAL=18, RING_TOTAL=8, WORLD=128;
+const ui={loading:document.querySelector('#loading'),start:document.querySelector('#start'),win:document.querySelector('#win'),play:document.querySelector('#play'),again:document.querySelector('#again'),count:document.querySelector('#count'),total:document.querySelector('#total'),ringCount:document.querySelector('#ringCount'),ringTotal:document.querySelector('#ringTotal'),progress:document.querySelector('#progress'),boost:document.querySelector('#boostBar'),tip:document.querySelector('#tip'),sound:document.querySelector('#sound'),navArrow:document.querySelector('#navArrow'),distance:document.querySelector('#distance'),questText:document.querySelector('#questText'),area:document.querySelector('#area'),areaName:document.querySelector('#areaName'),areaSmall:document.querySelector('#areaSmall'),celebration:document.querySelector('#celebration')};
+ui.total.textContent=TOTAL;ui.ringTotal.textContent=RING_TOTAL;
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0xb7b2ed,.0049);
+const camera=new THREE.PerspectiveCamera(64,innerWidth/innerHeight,.1,650);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7)); renderer.setSize(innerWidth,innerHeight); renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.08; document.body.prepend(renderer.domElement);
+const clock=new THREE.Clock(), keys={left:false,right:false,up:false,down:false,magic:false};
+let running=false,collected=0,ringsDone=0,yaw=0,speed=16,boost=1,audio=null,soundOn=true,lastTip=0,currentArea='';
+const rng=mulberry32(314159);
+
+// Zachte hemel met een warme zon en flonkerpuntjes.
+const sky=new THREE.Mesh(new THREE.SphereGeometry(360,40,24),new THREE.ShaderMaterial({side:THREE.BackSide,uniforms:{uTime:{value:0}},vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vP;uniform float uTime;void main(){float h=normalize(vP).y*.5+.5;vec3 low=vec3(.78,.67,.93),mid=vec3(.63,.74,.96),top=vec3(.28,.31,.65);vec3 c=mix(low,mid,smoothstep(.08,.48,h));c=mix(c,top,smoothstep(.48,1.,h));float sun=pow(max(0.,dot(normalize(vP),normalize(vec3(-.55,.28,-.45)))),18.);c+=vec3(1.,.55,.3)*sun*.75;float stars=step(.9975,fract(sin(dot(floor(vP.xy*1.7),vec2(12.9898,78.233)))*43758.5453));stars*=smoothstep(.57,.85,h)*(.45+.25*sin(uTime*2.+vP.x));gl_FragColor=vec4(c+stars,1.);}`}));scene.add(sky);
+scene.add(new THREE.HemisphereLight(0xdde7ff,0x664c8e,2.25));
+const sun=new THREE.DirectionalLight(0xffe9d3,3.8);sun.position.set(-55,80,-45);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-100;sun.shadow.camera.right=100;sun.shadow.camera.top=100;sun.shadow.camera.bottom=-100;sun.shadow.camera.far=220;scene.add(sun);
+const fill=new THREE.DirectionalLight(0xc4b2ff,1.1);fill.position.set(60,15,40);scene.add(fill);
+
+const MAT={
+  scale:new THREE.MeshStandardMaterial({color:0xb59af0,roughness:.58,metalness:.04}),
+  scale2:new THREE.MeshStandardMaterial({color:0x7dd8d0,roughness:.52}),
+  belly:new THREE.MeshStandardMaterial({color:0xffe8c9,roughness:.82}),
+  pink:new THREE.MeshStandardMaterial({color:0xf391c6,roughness:.6}),
+  white:new THREE.MeshStandardMaterial({color:0xffffff,roughness:.35}),
+  dark:new THREE.MeshStandardMaterial({color:0x3b315e,roughness:.3}),
+  wing:new THREE.MeshPhysicalMaterial({color:0x67d8cb,transparent:true,opacity:.86,roughness:.3,transmission:.08,emissive:0x235f69,emissiveIntensity:.18,side:THREE.DoubleSide}),
+  grass:new THREE.MeshStandardMaterial({color:0x8dd49c,roughness:.95}),
+  earth:new THREE.MeshStandardMaterial({color:0xb58b84,roughness:1}),
+  leaf:new THREE.MeshStandardMaterial({color:0x67b98e,roughness:.88}),
+  trunk:new THREE.MeshStandardMaterial({color:0x98706c,roughness:1}),
+  cloud:new THREE.MeshPhysicalMaterial({color:0xf7f2ff,transparent:true,opacity:.72,roughness:.9,depthWrite:false}),
+  water:new THREE.MeshPhysicalMaterial({color:0x83dfff,emissive:0x317ea1,emissiveIntensity:.25,transparent:true,opacity:.55,roughness:.18,side:THREE.DoubleSide}),
+  blossom:new THREE.MeshStandardMaterial({color:0xff9fd1,emissive:0x6e254e,emissiveIntensity:.16,roughness:.75}),
+  nightLeaf:new THREE.MeshStandardMaterial({color:0x486fa0,emissive:0x192a56,emissiveIntensity:.3,roughness:.7}),
+  gold:new THREE.MeshStandardMaterial({color:0xffda76,emissive:0x8a5310,emissiveIntensity:.22,metalness:.32,roughness:.34}),
+};
+function mesh(geo,mat,parent,position,scale,cast=true){const m=new THREE.Mesh(geo,mat);m.position.set(...position);m.scale.set(...scale);m.castShadow=cast;m.receiveShadow=true;parent.add(m);return m}
+
+const dragon=new THREE.Group();scene.add(dragon);
+const body=mesh(new THREE.SphereGeometry(1,28,20),MAT.scale,dragon,[0,.15,0],[1.65,1.25,2.7]);
+mesh(new THREE.SphereGeometry(1,22,16),MAT.belly,dragon,[0,-.25,-1.15],[1.16,.84,1.55]);
+const head=mesh(new THREE.SphereGeometry(1,28,20),MAT.scale,dragon,[0,1.05,-2.75],[1.42,1.25,1.45]);
+mesh(new THREE.SphereGeometry(1,20,14),MAT.belly,dragon,[0,.72,-3.72],[1.08,.65,.72]);
+for(const s of [-1,1]){
+  const eye=mesh(new THREE.SphereGeometry(1,16,12),MAT.white,dragon,[s*.67,1.5,-3.75],[.39,.51,.27]);
+  mesh(new THREE.SphereGeometry(1,14,10),MAT.dark,dragon,[s*.69,1.5,-3.99],[.17,.25,.12]);
+  mesh(new THREE.SphereGeometry(1,8,6),MAT.white,dragon,[s*.64,1.6,-4.08],[.055,.07,.035],false);
+  const horn=mesh(new THREE.ConeGeometry(.25,.9,12),MAT.pink,dragon,[s*.78,2.15,-2.78],[1,1,1]);horn.rotation.z=s*-.28;horn.rotation.x=-.1;
+  const cheek=mesh(new THREE.SphereGeometry(1,12,8),MAT.pink,dragon,[s*.85,.83,-4.12],[.23,.12,.07],false);
+}
+const noseGeo=new THREE.SphereGeometry(1,10,8);for(const s of [-1,1])mesh(noseGeo,MAT.dark,dragon,[s*.38,.88,-4.36],[.07,.05,.035],false);
+// Vriendelijke glimlach.
+const smile=new THREE.Mesh(new THREE.TorusGeometry(.34,.038,8,20,Math.PI),MAT.dark);smile.position.set(0,.58,-4.34);smile.rotation.z=Math.PI;dragon.add(smile);
+// Rugschubben en wiebelstaart.
+for(let i=0;i<6;i++){const spike=mesh(new THREE.ConeGeometry(.25-i*.018,.55,9),i%2?MAT.pink:MAT.scale2,dragon,[0,1.18-i*.12,-1.25+i*.72],[1,1,1]);spike.rotation.x=-.25;}
+const tail=[];for(let i=0;i<7;i++){const seg=mesh(new THREE.SphereGeometry(1,15,10),i%2?MAT.scale2:MAT.scale,dragon,[0,-.12-i*.04,2.3+i*.62],[.88-i*.1,.7-i*.075,.95-i*.095]);tail.push(seg)}
+// Vier zachte pootjes.
+for(const sx of [-1,1])for(const z of [-.9,1.2]){const leg=mesh(new THREE.SphereGeometry(1,16,12),MAT.scale2,dragon,[sx*1.15,-.95,z],[.42,.72,.5]);leg.rotation.z=sx*.16;mesh(new THREE.SphereGeometry(1,14,10),MAT.belly,dragon,[sx*1.2,-1.55,z-.15],[.48,.22,.58]);}
+function wing(side){const g=new THREE.Group();g.position.set(side*1.3,.75,-.35);dragon.add(g);const verts=new Float32Array([0,0,0,side*3.8,1.8,.7,side*3.15,-.1,1.9,side*1.35,-.3,2.2]);const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(verts,3));geo.setIndex([0,1,2,0,2,3]);geo.computeVertexNormals();const w=new THREE.Mesh(geo,MAT.wing);w.castShadow=true;g.add(w);const bone=new THREE.Mesh(new THREE.CylinderGeometry(.07,.1,4,8),MAT.scale2);bone.position.set(side*1.85,.9,.35);bone.rotation.z=side*1.08;g.add(bone);return g}
+const wingL=wing(-1),wingR=wing(1);
+dragon.position.set(0,13,52);
+
+// Wolkie, Snoepjes kleine witte drakenzusje, gebruikt dezelfde lichte geometrie.
+const wolkie=dragon.clone(true),wolkieWhite=new THREE.MeshStandardMaterial({color:0xf9fbff,roughness:.5}),wolkiePearl=new THREE.MeshStandardMaterial({color:0xddefff,roughness:.42});
+wolkie.scale.setScalar(.43);wolkie.traverse(o=>{if(!o.isMesh)return;if(o.material===MAT.scale)o.material=wolkieWhite;if(o.material===MAT.scale2)o.material=wolkiePearl});scene.add(wolkie);
+const wWingL=wolkie.children[dragon.children.indexOf(wingL)],wWingR=wolkie.children[dragon.children.indexOf(wingR)];
+
+// Lichtspoor.
+const PCOUNT=420,pPos=new Float32Array(PCOUNT*3),pCol=new Float32Array(PCOUNT*3),pLife=new Float32Array(PCOUNT);let pCursor=0;
+const pGeo=new THREE.BufferGeometry();pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));pGeo.setAttribute('color',new THREE.BufferAttribute(pCol,3));const pMat=new THREE.PointsMaterial({size:.72,map:sparkTexture(),transparent:true,opacity:.9,vertexColors:true,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true});const points=new THREE.Points(pGeo,pMat);scene.add(points);
+function spawnParticle(pos,color,life=1,spread=.5){const i=pCursor++%PCOUNT,j=i*3;pPos[j]=pos.x+(rng()-.5)*spread;pPos[j+1]=pos.y+(rng()-.5)*spread;pPos[j+2]=pos.z+(rng()-.5)*spread;const c=new THREE.Color(color);pCol[j]=c.r;pCol[j+1]=c.g;pCol[j+2]=c.b;pLife[i]=life;pGeo.attributes.position.needsUpdate=true;pGeo.attributes.color.needsUpdate=true;}
+function updateParticles(dt){for(let i=0;i<PCOUNT;i++){if(pLife[i]<=0)continue;const j=i*3;pLife[i]-=dt;pPos[j+1]+=dt*(.45+((i*17)%10)/18);pPos[j]+=Math.sin(clock.elapsedTime*3+i)*dt*.1;if(pLife[i]<=0)pPos[j+1]=-999;}pGeo.attributes.position.needsUpdate=true}
+
+// Zwevende eilanden, bomen en wolken.
+const islandGroup=new THREE.Group();scene.add(islandGroup);
+const KINGDOMS=[{name:'Wolkenzee',center:new THREE.Vector3(0,10,55),fog:0xb9c8f2},{name:'Bloesemvallei',center:new THREE.Vector3(68,12,-20),fog:0xe9b5d4},{name:'Kristalnacht',center:new THREE.Vector3(-68,15,-38),fog:0x899bd6}];
+const islandPlans=[[-3,-1,62,14,0],[18,2,35,8,0],[-24,4,33,7,0],[2,-4,92,10,0],[65,1,-20,16,1],[88,4,-7,8,1],[46,2,-42,10,1],[92,-2,-48,7,1],[-66,2,-38,17,2],[-91,5,-25,8,2],[-45,1,-68,10,2],[-91,-2,-68,7,2],[30,-3,-82,8,1],[-26,0,-97,9,2],[0,-3,-35,7,0],[39,3,7,6,1],[-37,5,3,6,2]];
+islandPlans.forEach((p,i)=>makeIsland(...p,i));
+function makeIsland(x,y,z,r,biome,i){const g=new THREE.Group();g.position.set(x,y,z);islandGroup.add(g);const grass=[MAT.grass,new THREE.MeshStandardMaterial({color:0xa8dc91,roughness:.95}),new THREE.MeshStandardMaterial({color:0x7189b9,emissive:0x182b53,emissiveIntensity:.15,roughness:.9})][biome];mesh(new THREE.CylinderGeometry(r*.95,r*.72,1.5,18),grass,g,[0,0,0],[1,1,1]);const rock=mesh(new THREE.ConeGeometry(r*.75,r*1.25,12),biome===2?new THREE.MeshStandardMaterial({color:0x655e8a,roughness:.8}):MAT.earth,g,[0,-r*.67,0],[1,1,1]);rock.rotation.y=rng()*3;if(r>9){const fall=mesh(new THREE.CylinderGeometry(.55,.16,r*1.45,10,1,true),MAT.water,g,[r*.45,-r*.63,0],[1,1,1],false);fall.rotation.z=.05}for(let t=0;t<(r>11?6:3);t++){const tx=(rng()-.5)*r*1.15,tz=(rng()-.5)*r*1.15;mesh(new THREE.CylinderGeometry(.13,.23,1.8,7),MAT.trunk,g,[tx,1.4,tz],[1,1,1]);const leafMat=biome===1?MAT.blossom:biome===2?MAT.nightLeaf:MAT.leaf;mesh(new THREE.IcosahedronGeometry(1,1),leafMat,g,[tx,2.75,tz],[1.15+rng()*.45,1.4+rng()*.5,1.15+rng()*.45]);}for(let f=0;f<7;f++){const fm=biome===2?MAT.scale2:biome===1?MAT.pink:MAT.belly;const petal=mesh(new THREE.SphereGeometry(1,8,6),fm,g,[(rng()-.5)*r*1.2,1,(rng()-.5)*r*1.2],[.13,.3,.13],false);petal.rotation.z=.3;}}
+const clouds=[];for(let i=0;i<26;i++){const g=new THREE.Group(),a=rng()*Math.PI*2,r=50+rng()*145;g.position.set(Math.cos(a)*r,2+rng()*48,Math.sin(a)*r);g.scale.setScalar(1.2+rng()*2.4);for(let b=0;b<5;b++)mesh(new THREE.SphereGeometry(1,12,9),MAT.cloud,g,[(b-2)*.8+(rng()-.5)*.3,rng()*.35,0],[1.2+rng()*.6,.65+rng()*.45,.8+rng()*.4],false);scene.add(g);clouds.push(g)}
+
+// Drie herkenningsplekken: regenboogpoort, bloesemhart en kristalpaleis.
+function rainbowArch(pos,scale=1){const g=new THREE.Group();g.position.copy(pos);scene.add(g);[0xff8dbd,0xffc66f,0xffeb91,0x74dfbd,0x79bfff,0xae8de8].forEach((c,i)=>{const arc=mesh(new THREE.TorusGeometry((7-i*.65)*scale,.28*scale,10,48,Math.PI),new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.25,roughness:.42}),g,[0,0,0],[1,1,1],false);arc.rotation.z=Math.PI;});return g}
+rainbowArch(new THREE.Vector3(0,10,55),1.15);
+const blossomHeart=new THREE.Group();blossomHeart.position.set(84,25,-33);blossomHeart.scale.setScalar(1.28);scene.add(blossomHeart);for(let i=0;i<22;i++){const a=i/22*Math.PI*2,x=5*Math.sin(a)**3,y=(13*Math.cos(a)-5*Math.cos(2*a)-2*Math.cos(3*a)-Math.cos(4*a))*4/17;const p=mesh(new THREE.SphereGeometry(1,12,9),i%3?MAT.blossom:MAT.belly,blossomHeart,[x,y,0],[1.25,1.8,.9],false);p.rotation.z=-a;}mesh(new THREE.SphereGeometry(1.7,16,12),MAT.gold,blossomHeart,[0,.4,0],[1,1,1]);
+const blossomTree=new THREE.Group();blossomTree.position.set(65,3,-20);scene.add(blossomTree);mesh(new THREE.CylinderGeometry(1.6,2.6,17,12),MAT.trunk,blossomTree,[0,8.5,0],[1,1,1]);for(const [x,y,z,s] of [[0,19,0,5.8],[-5.5,17,1,4.3],[5.5,17,-1,4.5],[-2,22,-1,4],[3,21,2,3.8]])mesh(new THREE.IcosahedronGeometry(1,2),MAT.blossom,blossomTree,[x,y,z],[s,s*.72,s]);for(let i=0;i<28;i++){const a=i/28*Math.PI*2,b=mesh(new THREE.SphereGeometry(1,10,7),i%3?MAT.blossom:MAT.belly,blossomTree,[Math.cos(a)*9,16+rng()*9,Math.sin(a)*5],[.34,.78,.34],false);b.rotation.z=a}mesh(new THREE.SphereGeometry(62,24,16),new THREE.MeshBasicMaterial({color:0xffb6d9,transparent:true,opacity:.08,side:THREE.BackSide,depthWrite:false}),scene,[68,16,-20],[1,1,1],false);
+const palace=new THREE.Group();palace.position.set(-68,7,-38);palace.scale.setScalar(1.2);scene.add(palace);const palaceStone=new THREE.MeshStandardMaterial({color:0x8178bd,emissive:0x29275f,emissiveIntensity:.28,roughness:.5}),palaceRoof=new THREE.MeshPhysicalMaterial({color:0x9fefff,emissive:0x347e9b,emissiveIntensity:.55,roughness:.12,clearcoat:1});mesh(new THREE.CylinderGeometry(9,10,2.5,8),palaceStone,palace,[0,-1,0],[1,1,1]);mesh(new THREE.CylinderGeometry(4.2,5.4,13,8),palaceStone,palace,[0,6,0],[1,1,1]);for(const x of [-6,6]){mesh(new THREE.CylinderGeometry(2.7,3.4,11,8),palaceStone,palace,[x,4,0],[1,1,1]);mesh(new THREE.ConeGeometry(3.3,6.5,8),palaceRoof,palace,[x,12.5,0],[1,1,1]);}mesh(new THREE.ConeGeometry(5,8.5,8),palaceRoof,palace,[0,16.5,0],[1,1,1]);const gate=mesh(new THREE.TorusGeometry(1.8,.42,10,24,Math.PI),MAT.dark,palace,[0,1.2,-5.25],[1,1.5,.35],false);gate.rotation.z=Math.PI;for(let i=-2;i<=2;i++){const spire=mesh(new THREE.OctahedronGeometry(1.1,0),i%2?MAT.scale2:MAT.pink,palace,[i*2.8,10+Math.abs(i),-1.2],[1,2.1,1]);spire.rotation.y=i*.35}const nightDome=mesh(new THREE.SphereGeometry(76,28,18),new THREE.MeshBasicMaterial({color:0x111b45,transparent:true,opacity:.67,side:THREE.BackSide,depthWrite:false}),scene,[-68,15,-38],[1,1,1],false);const crystalGarden=new THREE.Group();crystalGarden.position.set(-68,8,-38);scene.add(crystalGarden);for(let i=0;i<28;i++){const a=i/28*Math.PI*2,r=13+(i%4)*6,h=2.2+(i%5)*.9,c=i%2?0x8eefff:0xb795ff;const gem=mesh(new THREE.OctahedronGeometry(1,0),new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.72,roughness:.16}),crystalGarden,[Math.cos(a)*r,(i%3)*1.3,Math.sin(a)*r],[.7,h,.7]);gem.rotation.z=(i%3-1)*.18}
+
+// Regenboogringen vormen een tweede ontdekkingstocht naast de kristallen.
+const ringPlans=[[0,17,37,0],[18,20,16,.4],[42,18,-4,.75],[70,22,-25,1.2],[36,15,-58,1.65],[-5,21,-77,2.1],[-48,24,-59,2.55],[-73,20,-30,2.9]],rings=[];
+ringPlans.forEach((p,i)=>{const g=new THREE.Group();g.position.set(p[0],p[1],p[2]);g.rotation.y=p[3];const colors=[0xff91c8,0xffd270,0x7de1cb,0x9f8bed];colors.forEach((c,j)=>mesh(new THREE.TorusGeometry(4.7-j*.42,.17,8,36),new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.48,roughness:.32}),g,[0,0,0],[1,1,1],false));const halo=mesh(new THREE.TorusGeometry(5.3,.06,6,36),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.68}),g,[0,0,0],[1,1,1],false);scene.add(g);rings.push({g,halo,done:false,index:i});});
+
+// Kristallen met lichtkransen.
+const crystalPlans=[[-13,14,50],[13,18,45],[-26,20,26],[5,27,75],[24,10,89],[-8,31,103],[53,17,-4],[77,28,-12],[91,15,-34],[56,32,-47],[102,24,-61],[36,10,-80],[-49,17,-24],[-72,29,-30],[-91,14,-48],[-50,34,-66],[-87,26,-78],[-27,12,-99]],crystals=[];for(let i=0;i<TOTAL;i++)createCrystal(i);
+function createCrystal(i){const g=new THREE.Group();g.position.set(...crystalPlans[i]);const colors=[0x81e8d5,0xd79af4,0xff9bcf,0xffdc78],c=colors[i%colors.length];const mat=new THREE.MeshPhysicalMaterial({color:c,emissive:c,emissiveIntensity:.58,roughness:.15,metalness:.08,transmission:.18,clearcoat:1,clearcoatRoughness:.06});const core=mesh(new THREE.OctahedronGeometry(1.28,0),mat,g,[0,0,0],[1,1.75,1]);const ring=mesh(new THREE.TorusGeometry(2.05,.065,8,48),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.74}),g,[0,0,0],[1,1,1],false);ring.rotation.x=Math.PI/2;const halo=mesh(new THREE.SphereGeometry(2.7,16,12),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.09,depthWrite:false}),g,[0,0,0],[1,1,1],false);scene.add(g);crystals.push({g,core,ring,c,got:false,baseY:g.position.y});}
+
+// Bloesemblaadjes en kristalvonkjes geven elk rijk een eigen lucht.
+function ambientField(center,color,count,spread){const a=new Float32Array(count*3);for(let i=0;i<count;i++){a[i*3]=center.x+(rng()-.5)*spread;a[i*3+1]=4+rng()*38;a[i*3+2]=center.z+(rng()-.5)*spread}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(a,3));const p=new THREE.Points(g,new THREE.PointsMaterial({color,size:.38,map:sparkTexture(),transparent:true,opacity:.52,depthWrite:false,blending:THREE.AdditiveBlending}));scene.add(p);return p}
+const blossomDust=ambientField(KINGDOMS[1].center,0xffa8d4,180,88),nightDust=ambientField(KINGDOMS[2].center,0x9fefff,220,92);
+
+// Dwaallichtjes wijzen naar het dichtstbijzijnde kristal.
+const wisps=[];for(let i=0;i<9;i++){const w=mesh(new THREE.SphereGeometry(.22,8,6),new THREE.MeshBasicMaterial({color:i%2?0xffd1f0:0xb9fff0}),scene,[0,-999,0],[1,1,1],false);wisps.push(w)}
+function nearestCrystal(){let best=null,d=1e9;for(const c of crystals)if(!c.got){const q=dragon.position.distanceToSquared(c.g.position);if(q<d){d=q;best=c}}return best}
+function updateWisps(t){const target=nearestCrystal();if(!target){wisps.forEach(w=>w.position.y=-999);return}for(let i=0;i<wisps.length;i++){const w=wisps[i],q=(i+1)/(wisps.length+1),wave=Math.sin(t*2.6+i*1.7);w.position.lerpVectors(dragon.position,target.g.position,q);w.position.y+=1.8+wave*.65;w.position.x+=Math.cos(t*1.5+i)*.7;w.scale.setScalar(.75+.4*Math.sin(t*3+i));}}
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function sparkTexture(){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),g=x.createRadialGradient(32,32,0,32,32,31);g.addColorStop(0,'#fff');g.addColorStop(.18,'#fff');g.addColorStop(.5,'#d9b8ff99');g.addColorStop(1,'#fff0');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c)}
+let masterGain=null;
+function initAudio(){if(audio)return;audio=new(window.AudioContext||window.webkitAudioContext)();masterGain=audio.createGain();masterGain.gain.value=.72;masterGain.connect(audio.destination);[130.81,196,261.63].forEach((f,i)=>{const o=audio.createOscillator(),g=audio.createGain();o.type=i===1?'triangle':'sine';o.frequency.value=f;g.gain.value=[.018,.012,.009][i];o.connect(g).connect(masterGain);o.start()})}
+function chime(kind='crystal'){if(!soundOn||!audio)return;const now=audio.currentTime,notes=kind==='win'?[523,659,784,1046,1318]:kind==='ring'?[392,523,659]:[659,880];notes.forEach((f,i)=>{const o=audio.createOscillator(),g=audio.createGain();o.type=kind==='ring'?'triangle':'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,now+i*.07);g.gain.exponentialRampToValueAtTime(.11,now+i*.07+.02);g.gain.exponentialRampToValueAtTime(.0001,now+i*.07+.55);o.connect(g).connect(masterGain);o.start(now+i*.07);o.stop(now+i*.07+.6)})}
+function updateProgress(){ui.progress.style.width=`${((collected/TOTAL)*.72+(ringsDone/RING_TOTAL)*.28)*100}%`;ui.questText.textContent=collected<TOTAL?`Nog ${TOTAL-collected} kristal${TOTAL-collected===1?'':'len'} en ${RING_TOTAL-ringsDone} lichtring${RING_TOTAL-ringsDone===1?'':'en'} te vinden.`:ringsDone<RING_TOTAL?`De kristallen stralen! Nog ${RING_TOTAL-ringsDone} lichtring${RING_TOTAL-ringsDone===1?'':'en'}.`:'De drie rijken zijn helemaal wakker!'}
+function collect(c){c.got=true;collected++;ui.count.textContent=collected;updateProgress();chime('crystal');for(let i=0;i<55;i++)spawnParticle(c.g.position,c.c,1.35,5.3);c.g.visible=false;showTip(collected<TOTAL?['Prachtig! ✦','Wolkie jubelt! ☁️','Het kristal zingt! ♪','Een rijk wordt feller! 💎'][collected%4]:'Alle kristallen stralen! 🌟');checkVictory()}
+function passRing(r){if(r.done)return;r.done=true;ringsDone++;ui.ringCount.textContent=ringsDone;updateProgress();chime('ring');for(let i=0;i<80;i++)spawnParticle(r.g.position,[0xff91c8,0xffd270,0x7de1cb,0x9f8bed][i%4],1.5,8);r.g.visible=false;boost=Math.min(1,boost+.4);showTip(ringsDone===RING_TOTAL?'Alle lichtringen gevonden! 🌈':'Woesj! Regenboogring! 🌈');checkVictory()}
+function showTip(text){ui.tip.textContent=text;ui.tip.classList.add('showtip');clearTimeout(lastTip);lastTip=setTimeout(()=>ui.tip.classList.remove('showtip'),1800)}
+function checkVictory(){if(collected===TOTAL&&ringsDone===RING_TOTAL)setTimeout(victory,700)}
+function confetti(){ui.celebration.replaceChildren();const colors=['#ff8fc9','#ffdc74','#70dcc6','#a58ae9','#fff'];for(let i=0;i<70;i++){const p=document.createElement('i');p.className='confetti';p.style.left=`${rng()*100}%`;p.style.background=colors[i%colors.length];p.style.animationDelay=`${rng()*1.4}s`;p.style.setProperty('--drift',`${(rng()-.5)*240}px`);ui.celebration.append(p)}}
+function victory(){running=false;ui.win.style.display='grid';chime('win');confetti()}
+function reset(){collected=0;ringsDone=0;yaw=0;boost=1;currentArea='';dragon.position.set(0,13,52);crystals.forEach(c=>{c.got=false;c.g.visible=true});rings.forEach(r=>{r.done=false;r.g.visible=true});ui.count.textContent=ui.ringCount.textContent='0';ui.progress.style.width='0%';ui.win.style.display='none';ui.celebration.replaceChildren();running=true;updateProgress();showTip('Volg het kompas en de lichtjes ✦')}
+function startGame(){initAudio();audio?.resume();document.body.classList.add('playing');currentArea='';ui.start.style.opacity='0';setTimeout(()=>ui.start.style.display='none',360);running=true;updateProgress();showTip('Eerst door de regenboogring! 🌈')}
+ui.play.addEventListener('click',startGame);ui.again.addEventListener('click',reset);ui.sound.addEventListener('click',()=>{soundOn=!soundOn;ui.sound.textContent=soundOn?'🔊':'🔇';if(soundOn){initAudio();audio.resume()}if(masterGain)masterGain.gain.setTargetAtTime(soundOn?.72:0,audio.currentTime,.04)});
+
+const keyMap={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',Space:'magic',ShiftLeft:'magic',ShiftRight:'magic'};
+addEventListener('keydown',e=>{const k=keyMap[e.code];if(k){keys[k]=true;e.preventDefault()}});addEventListener('keyup',e=>{const k=keyMap[e.code];if(k){keys[k]=false;e.preventDefault()}});
+document.querySelectorAll('[data-key]').forEach(b=>{const k=b.dataset.key,on=e=>{e.preventDefault();keys[k]=true;b.classList.add('pressed')},off=e=>{e.preventDefault();keys[k]=false;b.classList.remove('pressed')};b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('pointerleave',off)});
+const magic=document.querySelector('#magic');magic.addEventListener('pointerdown',e=>{e.preventDefault();keys.magic=true;magic.classList.add('pressed')});for(const ev of ['pointerup','pointercancel','pointerleave'])magic.addEventListener(ev,e=>{e.preventDefault();keys.magic=false;magic.classList.remove('pressed')});
+
+const forward=new THREE.Vector3(),camGoal=new THREE.Vector3(),lookGoal=new THREE.Vector3(),tailPos=new THREE.Vector3(),wolkieGoal=new THREE.Vector3(),side=new THREE.Vector3();
+function nextGoal(){const nextRing=rings.find(r=>!r.done);if(nextRing)return{position:nextRing.g.position,distance:dragon.position.distanceTo(nextRing.g.position),type:'regenboogring'};let best=null,d=Infinity;for(const c of crystals)if(!c.got){const q=dragon.position.distanceToSquared(c.g.position);if(q<d){best=c.g.position;d=q}}return best?{position:best,distance:Math.sqrt(d),type:'kristal'}:null}
+function updateNavigator(){const goal=nextGoal();if(!goal){ui.distance.textContent='alles gevonden!';return}const dx=goal.position.x-dragon.position.x,dz=goal.position.z-dragon.position.z,desired=Math.atan2(-dx,-dz),relative=Math.atan2(Math.sin(desired-yaw),Math.cos(desired-yaw));ui.navArrow.style.transform=`rotate(${relative*180/Math.PI}deg)`;ui.distance.textContent=`${goal.type} · ${Math.round(goal.distance)} meter`}
+function updateKingdom(dt){let best=KINGDOMS[0],d=Infinity;for(const k of KINGDOMS){const q=(dragon.position.x-k.center.x)**2+(dragon.position.z-k.center.z)**2;if(q<d){d=q;best=k}}scene.fog.color.lerp(new THREE.Color(best.fog),dt*.45);if(best.name!==currentArea){currentArea=best.name;ui.areaName.textContent=ui.areaSmall.textContent=best.name;ui.area.classList.add('areaShow');setTimeout(()=>ui.area.classList.remove('areaShow'),2400)}}
+function updateWolkie(dt,t){forward.set(-Math.sin(yaw),0,-Math.cos(yaw));side.set(Math.cos(yaw),0,-Math.sin(yaw));wolkieGoal.copy(dragon.position).addScaledVector(side,5.4).addScaledVector(forward,-2.3);wolkieGoal.y+=2+Math.sin(t*2.5)*.6;wolkie.position.lerp(wolkieGoal,1-Math.pow(.012,dt));wolkie.rotation.y=yaw;wolkie.rotation.z=Math.sin(t*2.1)*.09;const flap=Math.sin(t*11);wWingL.rotation.z=.22+flap*.35;wWingR.rotation.z=-.22-flap*.35}
+function updateDragon(dt,t){if(!running)return;const steer=(keys.left?1:0)-(keys.right?1:0);yaw+=steer*dt*1.35;const climb=(keys.up?1:0)-(keys.down?1:0);dragon.position.y=THREE.MathUtils.clamp(dragon.position.y+climb*dt*11,4,40);boost=THREE.MathUtils.clamp(boost+(keys.magic?-.25:.105)*dt,0,1);const magicOn=keys.magic&&boost>.02;speed=THREE.MathUtils.lerp(speed,magicOn?28:16,dt*2.7);forward.set(-Math.sin(yaw),0,-Math.cos(yaw));dragon.position.addScaledVector(forward,speed*dt);dragon.rotation.y=yaw;dragon.rotation.z=THREE.MathUtils.lerp(dragon.rotation.z,steer*.28,dt*4);dragon.rotation.x=THREE.MathUtils.lerp(dragon.rotation.x,-climb*.12,dt*4);
+  if(dragon.position.x>WORLD)dragon.position.x=-WORLD;if(dragon.position.x<-WORLD)dragon.position.x=WORLD;if(dragon.position.z>WORLD)dragon.position.z=-WORLD;if(dragon.position.z<-WORLD)dragon.position.z=WORLD;
+  const flap=Math.sin(t*(magicOn?15:9));wingL.rotation.z=.22+flap*.32;wingR.rotation.z=-.22-flap*.32;wingL.rotation.x=flap*.12;wingR.rotation.x=flap*.12;tail.forEach((s,i)=>{s.position.x=Math.sin(t*3-i*.55)*(.12+i*.035);s.position.y=-.12-i*.04+Math.cos(t*2.5-i*.5)*.05});head.position.y=1.05+Math.sin(t*2.2)*.06;
+  dragon.localToWorld(tailPos.set(0,0,4.7));spawnParticle(tailPos,magicOn?0xff92db:(pCursor%2?0x9effe6:0xc9a5ff),magicOn?1.4:.8,magicOn?1.3:.55);if(magicOn)spawnParticle(tailPos,0xffffff,.7,1.8);ui.boost.style.width=`${boost*100}%`;
+  for(const c of crystals)if(!c.got&&dragon.position.distanceToSquared(c.g.position)<15.5)collect(c);
+  for(const r of rings)if(!r.done&&dragon.position.distanceToSquared(r.g.position)<31)passRing(r);
+}
+function updateCamera(dt){forward.set(-Math.sin(yaw),0,-Math.cos(yaw));camGoal.copy(dragon.position).addScaledVector(forward,-15);camGoal.y+=8.5;camera.position.lerp(camGoal,1-Math.pow(.002,dt));lookGoal.copy(dragon.position).addScaledVector(forward,8);lookGoal.y+=.1;camera.lookAt(lookGoal)}
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04),t=clock.elapsedTime;sky.material.uniforms.uTime.value=t;updateDragon(dt,t);updateCamera(dt);updateWolkie(dt,t);updateParticles(dt);updateWisps(t);updateNavigator();updateKingdom(dt);crystals.forEach((c,i)=>{if(c.got)return;c.g.position.y=c.baseY+Math.sin(t*1.5+i)*.7;c.core.rotation.y=t*.8+i;c.core.rotation.x=Math.sin(t+i)*.2;c.ring.rotation.z=t*.55+i});rings.forEach((r,i)=>{if(!r.done){r.halo.rotation.z=t*.55+i;r.g.scale.setScalar(1+Math.sin(t*2+i)*.035)}});blossomHeart.rotation.y=Math.sin(t*.6)*.16;blossomHeart.scale.setScalar(1.28+Math.sin(t*1.8)*.035);palace.rotation.y=Math.sin(t*.22)*.08;blossomDust.rotation.y=t*.008;nightDust.rotation.y=-t*.006;clouds.forEach((c,i)=>{c.position.x+=dt*(.45+(i%5)*.08);if(c.position.x>180)c.position.x=-180});renderer.render(scene,camera)}
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.7))});
+// Kleine zelftest voor de spelregels.
+console.assert(crystals.length===TOTAL&&rings.length===RING_TOTAL&&dragon.children.length>20&&wisps.length===9&&KINGDOMS.length===3,'Spelwereld niet compleet');
+camera.position.set(0,20,50);camera.lookAt(dragon.position);animate();
+ui.loading.style.display='none';
+window.__SNOEPJE_GAME__={ready:true,total:TOTAL,ringTotal:RING_TOTAL,get collected(){return collected},get ringsDone(){return ringsDone},get running(){return running},get position(){return dragon.position.toArray()},reset,testCollect:()=>collect(nearestCrystal()),testRing:()=>passRing(rings.find(r=>!r.done)),testPlace:n=>{dragon.position.copy(KINGDOMS[n].center).add(new THREE.Vector3(0,5,30));currentArea='';updateKingdom(1)}};
+</script>
+</body>
+</html>
